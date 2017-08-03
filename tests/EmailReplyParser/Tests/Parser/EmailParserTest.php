@@ -250,6 +250,15 @@ EMAIL
         $this->assertEquals(rtrim(implode("\n", $visibleFragments)), $email->getVisibleText());
     }
 
+
+    public function testEmailGmailNo()
+    {
+        $email     = $this->parser->parse($this->getFixtures('email_norwegian_gmail.txt'));
+        $fragments = $email->getFragments();
+        $this->assertEquals(static::COMMON_FIRST_FRAGMENT, trim($fragments[0]));
+    }
+
+
     public function testReadsEmailWithCorrectSignature()
     {
         $email     = $this->parser->parse($this->getFixtures('correct_sig.txt'));
@@ -384,6 +393,31 @@ merci d'avance", $email->getVisibleText());
         $this->assertTrue($fragments[1]->isQuoted());
     }
 
+    public function testVisibleTextSeemsLikeAQuoteHeader1()
+    {
+        $email = $this->parser->parse($this->getFixtures('email_19.txt'));
+        $fragments = $email->getFragments();
+        $this->assertRegexp('/^On Thursday/', (string) $fragments[0]);
+        $this->assertRegexp('/^On Dec 16/', (string) $fragments[1]);
+        $this->assertRegExp('/Was this/', (string) $fragments[1]);
+    }
+
+    public function testVisibleTextSeemsLikeAQuoteHeader2()
+    {
+        $email = $this->parser->parse($this->getFixtures('email_20.txt'));
+        $fragments = $email->getFragments();
+        $this->assertRegexp('/^On Thursday/', (string) $fragments[0]);
+        $this->assertRegexp('/^> On May 17/', (string) $fragments[1]);
+        $this->assertRegExp('/fix this parsing/', (string) $fragments[1]);
+    }
+
+    public function testEmailWithFairAmountOfContent()
+    {
+        $email = $this->parser->parse($this->getFixtures('email_21.txt'));
+        $fragments = $email->getFragments();
+        $this->assertRegexp('/^On Thursday/', (string) $fragments[0]);
+    }
+
     /**
      * @dataProvider getDateFormats
      */
@@ -412,6 +446,32 @@ merci d'avance", $email->getVisibleText());
             array('在 2016年11月8日，下午2:23，Test user <test@example.com> 写道：'), // Chinese Apple Mail iPhone parsed html
             array('2016. 11. 8. 오후 12:39 Test user <test@example.com> 작성:'), // Korean Apple Mail iPhone
             array('2016/11/08 14:26、Test user <test@example.com> のメッセージ:'), // Japanese Apple Mail iPhone
+            array("tir. 18. apr. 2017 kl. 13:09 skrev Test user <test@example.com>:"), // Norwegian Gmail
+        );
+    }
+
+    /**
+     * @dataProvider getFromHeaders
+     */
+    public function testFromQuoteHeader($from)
+    {
+        $email = $this->parser->parse(str_replace('[FROM]', $from, $this->getFixtures('email_with_from_headers.txt')));
+        $fragments = $email->getFragments();
+        $this->assertSame(<<<CONTENT
+{$from}
+
+My email is <foo@example.com>
+CONTENT
+        , $fragments[1]->getContent());
+    }
+
+    public function getFromHeaders()
+    {
+        return array(
+            array('From: foo@example.com <foo@example.com>'),
+            array('De: foo@example.com <foo@example.com>'),
+            array('Van: foo@example.com <foo@example.com>'),
+            array('Da: foo@example.com <foo@example.com>'),
         );
     }
 }
